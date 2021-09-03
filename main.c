@@ -1,6 +1,7 @@
-//#include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/times.h> // for times
+#include <unistd.h> // for sysconf
 
 void swap (int* a, int* b) {
     int temp = *a;
@@ -9,11 +10,9 @@ void swap (int* a, int* b) {
 }
 
 int main (void) {
-    union ticks{
-        unsigned long long t64;
-        struct s32 { long th, tl; } t32;
-    } start, end;
-    double cpu_Hz = 2000000000ULL; // for 2 GHz CPU
+    struct tms start, end;
+    long clocks_per_sec = sysconf(_SC_CLK_TCK);
+    long clocks;
     FILE* input = fopen("/home/ilya/CLionProjects/my_bubble_sort/in.txt", "r");
     if (input == NULL) {
         return 1;
@@ -37,9 +36,7 @@ int main (void) {
         a[i] = m;
     }
     fclose(input);
-    //struct timespec start, end;
-    // clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-    asm("rdtsc\n" : "=a" (start.t32.th), "=d" (start.t32.tl));
+    times(&start);
     for (int i = 0; i < n; ++ i) {
         for (int j = n - 1; j > i; -- j) {
             if (a[j] <= a[j - 1]) {
@@ -47,15 +44,14 @@ int main (void) {
             }
         }
     }
-    asm("rdtsc\n" : "=a" (end.t32.th), "=d" (end.t32.tl));
-    //clock_gettime(CLOCK_MONOTONIC_RAW, &end);
-    //printf("Time taken: %lf sec.\n", end.tv_sec-start.tv_sec + 0.000000001 * (end.tv_nsec - start.tv_nsec));
+    times(&end);
+    clocks = end.tms_utime - start.tms_utime;
+    printf("Time taken: %lf sec.\n", (double) clocks / clocks_per_sec);
     FILE* output = fopen("/home/ilya/CLionProjects/my_bubble_sort/out.txt", "w");
     if (output == NULL) {
         free(a);
         return 1;
     }
-    printf("Time taken: %lf sec.\n", (end.t64-start.t64) / cpu_Hz);
     for (int i = 0; i < n; ++ i) {
         fprintf(output, "%d ", a[i]);
     }
